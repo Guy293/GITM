@@ -1,0 +1,15 @@
+# options: https://clang.llvm.org/docs/ClangFormatStyleOptions.html
+BasedOnStyle: GOOGLE
+Language: Cpp
+# SeparateDefinitionBlocks: Always
+# IndentWidth: 4
+# ColumnLimit: 80
+# SpaceAfterCStyleCast: true
+# UseTab: Never
+# AllowShortIfStatementsOnASingleLine: false
+# AlignTrailingComments: true
+# SpacesBeforeTrailingComments: 3
+# AlignConsecutiveMacros: Consecutive
+DerivePointerAlignment: false
+PointerAlignment: Left
+# UseCRLF: false

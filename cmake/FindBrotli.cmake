@@ -1,0 +1,34 @@
+include(FindPackageHandleStandardArgs)
+
+
+find_path( BROTLI_INCLUDE_DIR NAMES brotli/decode.h
+  PATHS $ENV{BROTLI_ROOT_DIR}
+  PATH_SUFFIXES "include" )
+  
+find_library( BROTLI_LIBRARY_COMMON NAMES libbrotlicommon.a brotlicommon
+  PATHS $ENV{BROTLI_ROOT_DIR}
+  PATH_SUFFIXES "lib/${CMAKE_LIBRARY_ARCHITECTURE}" "lib" )
+
+find_library( BROTLI_LIBRARY_ENC NAMES libbrotlienc.a brotlienc
+  PATHS $ENV{BROTLI_ROOT_DIR}
+  PATH_SUFFIXES "lib/${CMAKE_LIBRARY_ARCHITECTURE}" "lib" )
+
+find_library( BROTLI_LIBRARY_DEC NAMES libbrotlidec.a brotlidec
+  PATHS $ENV{BROTLI_ROOT_DIR}
+  PATH_SUFFIXES "lib/${CMAKE_LIBRARY_ARCHITECTURE}" "lib" )
+
+
+find_package_handle_standard_args(Brotli
+    FOUND_VAR
+      BROTLI_FOUND
+    REQUIRED_VARS
+      BROTLI_INCLUDE_DIR
+      BROTLI_LIBRARY_COMMON
+      BROTLI_LIBRARY_ENC
+      BROTLI_LIBRARY_DEC
+    FAIL_MESSAGE
+      "Could NOT find BROTLI"
+)
+
+set(BROTLI_INCLUDE_DIRS ${BROTLI_INCLUDE_DIR})
+set(BROTLI_LIBRARIES ${BROTLI_LIBRARY_COMMON} ${BROTLI_LIBRARY_ENC} ${BROTLI_LIBRARY_DEC})
