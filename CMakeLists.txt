@@ -84,7 +84,7 @@ if(WIN32)
 endif()
 
 
-add_executable(MITMProxy "src/helper.h" "src/logger.cpp" "src/main.cpp" "src/http_parser.cpp" "src/server.cpp" "src/http_request_parser.cpp" "src/http_response_parser.cpp" src/mainwindow.cpp src/mainwindow.h src/mainwindow.ui src/session.cpp)
+add_executable(MITMProxy "src/helper.h" "src/logger.cpp" "src/main.cpp" "src/http_parser.cpp" "src/server.cpp" "src/http_request_parser.cpp" "src/http_response_parser.cpp" "src/mainwindow.cpp" "src/mainwindow.h" "src/mainwindow.ui" "src/session.cpp")
 
 target_link_libraries(MITMProxy Qt6::Core Qt6::Gui Qt6::Widgets)
 #target_link_libraries(MITMProxy Boost::zlib Boost::iostreams Boost::log Boost::log_setup)

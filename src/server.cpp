@@ -28,7 +28,10 @@ Server::Server(asio::io_context& io_context, tcp::endpoint& endpoint,
       acceptor(io_context, endpoint),
       root_ca_info(),
       intercept_cb(),
-      intercepted_sessions_queue() {
+      intercepted_sessions_queue(),
+      intercept_to_host_enabled(false),
+      intercept_to_client_enabled(false),
+      host_interception_filter("") {
   FILE* p_ca_file;
   FILE* p_ca_key_file;
 
@@ -67,9 +70,11 @@ void Server::accept() {
       return;
     }
 
-    std::shared_ptr<Session> session =
-        std::make_shared<Session>(io_context, this, std::move(*this->socket),
-                                  root_ca_info, this->intercept_cb);
+    std::shared_ptr<Session> session = std::make_shared<Session>(
+        io_context, std::move(*this->socket), root_ca_info,
+        this->intercepted_sessions_queue, *this->intercept_cb,
+        this->intercept_to_host_enabled, this->intercept_to_client_enabled,
+        this->host_interception_filter);
 
     // LOG_INFO << "Count: " << ObjectCount::count;
 
@@ -80,6 +85,18 @@ void Server::accept() {
 
 void Server::set_intercept_cb(const TInterceptCB& intercept_cb) {
   this->intercept_cb = intercept_cb;
+}
+
+void Server::set_intercept_to_host_enabled(bool enabled) {
+  this->intercept_to_host_enabled = enabled;
+}
+
+void Server::set_intercept_to_client_enabled(bool enabled) {
+  this->intercept_to_client_enabled = enabled;
+}
+
+void Server::set_host_interception_filter(std::string filter) {
+  this->host_interception_filter = filter;
 }
 
 }  // namespace Proxy

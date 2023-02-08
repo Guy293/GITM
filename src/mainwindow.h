@@ -24,6 +24,9 @@ class MainWindow : public QMainWindow {
   void set_editor(const std::vector<char>& http_message,
                   const std::string& remote_host);
   void on_sendButton_clicked();
+  void on_interceptToClientCheckBox_toggled(bool checked);
+  void on_interceptToHostCheckBox_toggled(bool checked);
+  void on_hostFilterLineEdit_textEdited(const QString& arg1);
 
  signals:
   void session_intercepted(const std::vector<char>& http_message,

@@ -41,14 +41,19 @@ class Server {
     std::shared_ptr<TInterceptResponseCB> intercept_response_cb;
   };
 
+  using InterceptedSessionsQueue = std::queue<InterceptedSession>;
+
   Server(boost::asio::io_context& io_context,
          boost::asio::ip::tcp::endpoint& endpoint, const char* ca_path,
          const char* ca_key_path);
 
   void set_intercept_cb(const TInterceptCB& intercept_cb);
 
-  //   std::queue<std::shared_ptr<Session>> intercepted_sessions_queue;
-  std::queue<InterceptedSession> intercepted_sessions_queue;
+  void set_intercept_to_host_enabled(bool enabled);
+  void set_intercept_to_client_enabled(bool enabled);
+  void set_host_interception_filter(std::string host_filter);
+
+  InterceptedSessionsQueue intercepted_sessions_queue;
 
  private:
   void accept();
@@ -59,6 +64,9 @@ class Server {
   std::optional<TInterceptCB> intercept_cb;
   boost::asio::ip::tcp::acceptor acceptor;
   std::optional<boost::asio::ip::tcp::socket> socket;
+  bool intercept_to_host_enabled;
+  bool intercept_to_client_enabled;
+  std::string host_interception_filter;
 };
 
 }  // namespace Proxy

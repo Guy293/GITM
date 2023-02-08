@@ -24,6 +24,8 @@ MainWindow::MainWindow(QWidget* parent, Proxy::Server& server)
                    &MainWindow::set_editor);
 
   this->ui->interceptingRemote->setText("Remote: ");
+  this->ui->plainTextEdit->setEnabled(false);
+  this->ui->sendButton->setEnabled(false);
 
   server.set_intercept_cb(
       std::bind(&MainWindow::intercept_cb, this, _1, _2, _3));
@@ -62,6 +64,7 @@ void MainWindow::on_sendButton_clicked() {
     this->ui->plainTextEdit->clear();
     this->ui->plainTextEdit->setEnabled(false);
     this->ui->sendButton->setEnabled(false);
+    this->ui->interceptingRemote->setText("Remote: ");
 
     //     auto session = this->server.intercepted_sessions_queue.front();
     auto intercept_response_cb = this->intercept_response_cb.value();
@@ -81,6 +84,18 @@ void MainWindow::on_sendButton_clicked() {
     //       this->editor_changed(session.http_message);
     //     }
   }
+}
+
+void MainWindow::on_interceptToClientCheckBox_toggled(bool checked) {
+  this->server.set_intercept_to_client_enabled(checked);
+}
+
+void MainWindow::on_interceptToHostCheckBox_toggled(bool checked) {
+  this->server.set_intercept_to_host_enabled(checked);
+}
+
+void MainWindow::on_hostFilterLineEdit_textEdited(const QString& arg1) {
+  this->server.set_host_interception_filter(arg1.toStdString());
 }
 
 MainWindow::~MainWindow() { delete ui; }
