@@ -30,8 +30,7 @@ Server::Server(asio::io_context& io_context, tcp::endpoint& endpoint,
       intercept_cb(),
       intercepted_sessions_queue(),
       intercept_to_host_enabled(false),
-      intercept_to_client_enabled(false),
-      host_interception_filter("") {
+      intercept_to_client_enabled(false) {
   FILE* p_ca_file;
   FILE* p_ca_key_file;
 

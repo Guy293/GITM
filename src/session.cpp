@@ -122,14 +122,14 @@ void Session::on_remote_connect(const system::error_code& error) {
     const boost::system::error_code empty_error = boost::system::error_code();
     this->on_proxy_data_read(
         empty_error, this->request_parser.raw_message.size(),
-        std::make_shared<HttpParser::HttpRequestParser>(request_parser),
+        std::make_shared<HttpParser::HttpRequestParser>(),
         std::make_shared<std::vector<char>>(this->request_parser.raw_message),
         this->client_socket, this->remote_socket,
-        this->intercept_to_client_enabled);
-
-    this->proxy_data<tcp::socket, HttpParser::HttpRequestParser>(
-        this->remote_socket, this->client_socket,
         this->intercept_to_host_enabled);
+
+    this->proxy_data<tcp::socket, HttpParser::HttpResponseParser>(
+        this->remote_socket, this->client_socket,
+        this->intercept_to_client_enabled);
   }
 }
 
@@ -265,8 +265,9 @@ void Session::on_proxy_data_read(const system::error_code& error,
 
   // Intercept only if content type is text
   if (parser->headers.count("content-type") > 0 &&
-      parser->headers["content-type"].find("text") == std::string::npos &&
-      parser->headers["content-type"].find("json") == std::string::npos) {
+      parser->headers["content-type"].find("text/") == std::string::npos &&
+      parser->headers["content-type"].find("application/") ==
+          std::string::npos) {
     intercept = false;
   }
 
