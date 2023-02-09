@@ -202,7 +202,8 @@ std::vector<char> HttpParser::build(bool encode_body) const {
       std::vector<char> compressed_body = this->compress_body(this->body);
 
       if (this->transfer_method == TransferMethod::content_length) {
-        build_headers["content-length"] = compressed_body.size();
+        build_headers["content-length"] =
+            std::to_string(compressed_body.size());
         Helper::vector_insert(&build_body, &compressed_body);
 
       } else if (this->transfer_method == TransferMethod::chunked) {
