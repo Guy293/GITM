@@ -20,9 +20,9 @@ Session::Session(asio::io_context& io_context, tcp::socket&& client_socket,
                  const Server::RootCAInfo& root_ca_info,
                  Server::InterceptedSessionsQueue& intercepted_sessions_queue,
                  const Server::TInterceptCB& intercept_cb,
-                 bool intercept_to_host_enabled,
-                 bool intercept_to_client_enabled,
-                 std::string host_interception_filter)
+                 const bool& intercept_to_host_enabled,
+                 const bool& intercept_to_client_enabled,
+                 const std::string& host_interception_filter)
     : io_context(io_context),
       root_ca_info(root_ca_info),
       intercepted_sessions_queue(intercepted_sessions_queue),
@@ -273,7 +273,8 @@ void Session::on_proxy_data_read(const system::error_code& error,
 
   // Intercept only if matches the intercept filter
   if (this->host_interception_filter != "" &&
-      this->host_interception_filter != this->request_parser.host.name) {
+      this->request_parser.host.name.find(this->host_interception_filter) ==
+          std::string::npos) {
     intercept = false;
   }
 

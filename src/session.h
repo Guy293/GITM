@@ -19,8 +19,9 @@ class Session : public std::enable_shared_from_this<Session> {
           const Server::RootCAInfo& root_ca_info,
           Server::InterceptedSessionsQueue& intercepted_sessions_queue,
           const Server::TInterceptCB& intercept_cb,
-          bool intercept_to_host_enabled, bool intercept_to_client_enabled,
-          std::string host_interception_filter);
+          const bool& intercept_to_host_enabled,
+          const bool& intercept_to_client_enabled,
+          const std::string& host_interception_filter);
   void start();
   //   ~Session();
 
@@ -73,9 +74,9 @@ class Session : public std::enable_shared_from_this<Session> {
   std::optional<boost::asio::ssl::stream<boost::asio::ip::tcp::socket&>>
       ssl_client_socket;
   std::string remote_host;
-  bool intercept_to_host_enabled;
-  bool intercept_to_client_enabled;
-  std::string host_interception_filter;
+  const bool& intercept_to_host_enabled;
+  const bool& intercept_to_client_enabled;
+  const std::string& host_interception_filter;
   // boost::asio::streambuf streambuf;
   // std::vector<char> buffer;
 };
