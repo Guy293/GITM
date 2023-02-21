@@ -90,7 +90,8 @@ add_executable(
   "src/mainwindow.cpp"
   "src/mainwindow.h"
   "src/mainwindow.ui"
-  "src/session.cpp")
+  "src/session.cpp"
+  "src/http_highlighter.cpp")
 
 target_link_libraries(MITMProxy Qt6::Core Qt6::Gui Qt6::Widgets)
 # target_link_libraries(MITMProxy Boost::zlib Boost::iostreams Boost::log

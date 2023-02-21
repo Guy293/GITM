@@ -22,6 +22,8 @@ MainWindow::MainWindow(QWidget* parent, Proxy::Server& server)
 
   QObject::connect(this, &MainWindow::session_intercepted, this,
                    &MainWindow::set_editor);
+  HttpHighlighter* highlighter =
+      new HttpHighlighter(ui->plainTextEdit->document());
 
   this->ui->interceptingRemote->setText("Remote: ");
   this->ui->plainTextEdit->setEnabled(false);
