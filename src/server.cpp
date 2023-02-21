@@ -71,7 +71,7 @@ void Server::accept() {
 
     std::shared_ptr<Session> session = std::make_shared<Session>(
         io_context, std::move(*this->socket), root_ca_info,
-        this->intercepted_sessions_queue, *this->intercept_cb,
+        this->intercepted_sessions_queue, this->intercept_cb,
         this->intercept_to_host_enabled, this->intercept_to_client_enabled,
         this->host_interception_filter);
 

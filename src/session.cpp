@@ -19,7 +19,7 @@ namespace Proxy {
 Session::Session(asio::io_context& io_context, tcp::socket&& client_socket,
                  const Server::RootCAInfo& root_ca_info,
                  Server::InterceptedSessionsQueue& intercepted_sessions_queue,
-                 const Server::TInterceptCB& intercept_cb,
+                 const std::optional<Server::TInterceptCB>& intercept_cb,
                  const bool& intercept_to_host_enabled,
                  const bool& intercept_to_client_enabled,
                  const std::string& host_interception_filter)

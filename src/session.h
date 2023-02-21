@@ -18,7 +18,7 @@ class Session : public std::enable_shared_from_this<Session> {
           boost::asio::ip::tcp::socket&& client_socket,
           const Server::RootCAInfo& root_ca_info,
           Server::InterceptedSessionsQueue& intercepted_sessions_queue,
-          const Server::TInterceptCB& intercept_cb,
+          const std::optional<Server::TInterceptCB>& intercept_cb,
           const bool& intercept_to_host_enabled,
           const bool& intercept_to_client_enabled,
           const std::string& host_interception_filter);
