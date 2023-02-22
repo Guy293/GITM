@@ -59,7 +59,7 @@ class Session : public std::enable_shared_from_this<Session> {
   std::tuple<std::string, std::string> resign_certificate(
       X509* p_pub_certificate, std::string hostname);
 
-  const Server::RootCAInfo root_ca_info;
+  const Server::RootCAInfo& root_ca_info;
   boost::asio::io_context& io_context;
   Server::InterceptedSessionsQueue& intercepted_sessions_queue;
   std::optional<Server::TInterceptCB> intercept_cb;
