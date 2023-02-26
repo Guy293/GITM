@@ -17,7 +17,7 @@ class Session : public std::enable_shared_from_this<Session> {
   Session(boost::asio::io_context& io_context,
           boost::asio::ip::tcp::socket&& client_socket,
           const Server::RootCAInfo& root_ca_info,
-          Server::InterceptedSessionsQueue& intercepted_sessions_queue,
+          Server::InterceptedSessions& intercepted_sessions_queue,
           const std::optional<Server::TInterceptCB>& intercept_cb,
           const bool& intercept_to_host_enabled,
           const bool& intercept_to_client_enabled,
@@ -61,19 +61,20 @@ class Session : public std::enable_shared_from_this<Session> {
 
   const Server::RootCAInfo& root_ca_info;
   boost::asio::io_context& io_context;
-  Server::InterceptedSessionsQueue& intercepted_sessions_queue;
+  Server::InterceptedSessions& intercepted_sessions;
   std::optional<Server::TInterceptCB> intercept_cb;
   boost::asio::ip::tcp::resolver resolver;
   boost::asio::ip::tcp::socket client_socket;
   boost::asio::ip::tcp::socket remote_socket;
   HttpParser::HttpRequestParser request_parser;
+  HttpParser::Host remote_host;
+  bool is_ssl;
   std::optional<boost::asio::ssl::context> remote_ctx;
   std::optional<boost::asio::ssl::context> client_ctx;
   std::optional<boost::asio::ssl::stream<boost::asio::ip::tcp::socket&>>
       ssl_remote_socket;
   std::optional<boost::asio::ssl::stream<boost::asio::ip::tcp::socket&>>
       ssl_client_socket;
-  std::string remote_host;
   const bool& intercept_to_host_enabled;
   const bool& intercept_to_client_enabled;
   const std::string& host_interception_filter;

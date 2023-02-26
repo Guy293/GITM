@@ -28,7 +28,7 @@ Server::Server(asio::io_context& io_context, tcp::endpoint& endpoint,
       acceptor(io_context, endpoint),
       root_ca_info(),
       intercept_cb(),
-      intercepted_sessions_queue(),
+      intercepted_sessions(),
       intercept_to_host_enabled(false),
       intercept_to_client_enabled(false) {
   FILE* p_ca_file;
@@ -82,8 +82,8 @@ void Server::accept() {
   });
 }
 
-void Server::set_intercept_cb(const TInterceptCB& intercept_cb) {
-  this->intercept_cb = intercept_cb;
+void Server::set_intercept_cb(const TInterceptCB& cb) {
+  this->intercept_cb = cb;
 }
 
 void Server::set_intercept_to_host_enabled(bool enabled) {
@@ -96,6 +96,32 @@ void Server::set_intercept_to_client_enabled(bool enabled) {
 
 void Server::set_host_interception_filter(std::string filter) {
   this->host_interception_filter = filter;
+}
+
+std::size_t Server::get_intercepted_sessions_list_size() const {
+  return this->intercepted_sessions.size();
+}
+
+const Server::InterceptedSession& Server::get_intercepted_session(
+    std::size_t index) const {
+  if (index >= this->intercepted_sessions.size()) {
+    throw std::out_of_range("Index out of range");
+  }
+
+  return this->intercepted_sessions.at(index);
+}
+
+const Server::InterceptedSession& Server::get_intercepted_session(
+    const uuids::uuid& id) const {
+  auto it = std::find_if(this->intercepted_sessions.begin(),
+                         this->intercepted_sessions.end(),
+                         [&](const InterceptedSession& intercepted_session) {
+                           return intercepted_session.id == id;
+                         });
+  if (it == this->intercepted_sessions.end()) {
+    throw std::out_of_range("Index out of range");
+  }
+  return *it;
 }
 
 }  // namespace Proxy

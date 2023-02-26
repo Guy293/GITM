@@ -3,9 +3,12 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/asio.hpp>
 #include <boost/asio/ssl.hpp>
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_generators.hpp>
 #include <iostream>
 #include <utility>
 
+#include "boost/uuid/random_generator.hpp"
 #include "http_request_parser.h"
 #include "http_response_parser.h"
 #include "logger.h"
@@ -16,21 +19,24 @@ using asio::ip::tcp;
 
 namespace Proxy {
 
-Session::Session(asio::io_context& io_context, tcp::socket&& client_socket,
+Session::Session(
+    asio::io_context& io_context, tcp::socket&& client_socket,
                  const Server::RootCAInfo& root_ca_info,
-                 Server::InterceptedSessionsQueue& intercepted_sessions_queue,
+    Server::InterceptedSessions& intercepted_sessions_queue,
                  const std::optional<Server::TInterceptCB>& intercept_cb,
                  const bool& intercept_to_host_enabled,
                  const bool& intercept_to_client_enabled,
                  const std::string& host_interception_filter)
     : io_context(io_context),
       root_ca_info(root_ca_info),
-      intercepted_sessions_queue(intercepted_sessions_queue),
+      intercepted_sessions(intercepted_sessions_queue),
       intercept_cb(intercept_cb),
       resolver(io_context),
       client_socket(std::move(client_socket)),
       remote_socket(io_context),
       request_parser(),
+      is_ssl(false),
+      remote_host(),
       intercept_to_host_enabled(intercept_to_host_enabled),
       intercept_to_client_enabled(intercept_to_client_enabled),
       host_interception_filter(host_interception_filter) {}
@@ -74,16 +80,20 @@ void Session::on_request_read(const system::error_code& error,
                   buffer));
   }
 
-  LOG_DEBUG << "Target: " << this->request_parser.host.name << ":"
-            << this->request_parser.host.port;
+  this->is_ssl = this->request_parser.method == "CONNECT";
+
+  this->remote_host = {.name = this->request_parser.host.name,
+                       .port = this->request_parser.host.port};
+
+  LOG_DEBUG << "Target: " << this->remote_host.name << ":"
+            << this->remote_host.port;
 
   // tcp::resolver::query query(this->request_parser.host.name,
   //     std::to_string(this->request_parser.host.port),
   //     asio::ip::resolver_query_base::numeric_service);
 
   this->resolver.async_resolve(
-      this->request_parser.host.name,
-      std::to_string(this->request_parser.host.port),
+      this->remote_host.name, std::to_string(this->remote_host.port),
       std::bind(&Session::on_remote_resolve, this->shared_from_this(), _1, _2));
 }
 
@@ -105,20 +115,15 @@ void Session::on_remote_connect(const system::error_code& error) {
     return;
   }
 
-  this->remote_host = this->request_parser.host.name + ":" +
-                      std::to_string(this->request_parser.host.port);
-
-  // SSL
-  if (this->request_parser.method == "CONNECT") {
+  if (this->is_ssl) {
     std::string response = "HTTP/1.0 200 Connection established\r\n\r\n";
     this->client_socket.async_send(
         asio::buffer(response.data(), response.size()),
         std::bind(&Session::on_ssl_response_sent, this->shared_from_this(), _1,
                   _2));
-  }
-  // Not SSL
-  else {
-    // Skip reading the request from the client as we already have it
+  } else {
+    // Skip reading the request from the client (proxy_data) as we
+    // already have it and call on_proxy_data_read directly
     const boost::system::error_code empty_error = boost::system::error_code();
     this->on_proxy_data_read(
         empty_error, this->request_parser.raw_message.size(),
@@ -263,6 +268,12 @@ void Session::on_proxy_data_read(const system::error_code& error,
                             });
   }
 
+  // Save the request parser for later use
+  // (might overwrite the HTTPS CONNECT parser)
+  if constexpr (std::is_same_v<T_parser, HttpParser::HttpRequestParser>) {
+    this->request_parser = *parser;
+  }
+
   // Intercept only if content type is text
   if (parser->headers.count("content-type") > 0 &&
       parser->headers["content-type"].find("text/") == std::string::npos &&
@@ -273,7 +284,7 @@ void Session::on_proxy_data_read(const system::error_code& error,
 
   // Intercept only if matches the intercept filter
   if (this->host_interception_filter != "" &&
-      this->request_parser.host.name.find(this->host_interception_filter) ==
+      this->remote_host.name.find(this->host_interception_filter) ==
           std::string::npos) {
     intercept = false;
   }
@@ -281,50 +292,69 @@ void Session::on_proxy_data_read(const system::error_code& error,
   std::vector<char> readable_message = parser->build(false);
 
   if (intercept && this->intercept_cb.has_value()) {
-    std::function<void(T_stream&, const std::vector<char>&)>
+    std::function<void(uuids::uuid, T_stream&, const std::vector<char>&)>
         intercept_response_cb;
-    intercept_response_cb = [self = this->shared_from_this()](
-                                T_stream& to,
+    intercept_response_cb = [self = this->shared_from_this(),
+                             original_message_parser = parser,
+                             original_message = readable_message](
+                                uuids::uuid interception_id, T_stream& to,
                                 const std::vector<char>& altered_message) {
-      auto final_message = std::make_shared<std::vector<char>>();
+      std::shared_ptr<std::vector<char>> final_message;
+      // If the message was not altered,
+      // send the original message instead of building it again
+      if (false && original_message == altered_message) {
+        final_message = std::make_shared<std::vector<char>>(
+            original_message_parser->raw_message);
+      } else {
       T_parser altered_parser;
       altered_parser.process_chunk(altered_message.data(),
                                    altered_message.size(), false);
-      *final_message = altered_parser.build();
+        final_message =
+            std::make_shared<std::vector<char>>(altered_parser.build());
+      }
 
       asio::async_write(
           to, asio::buffer(final_message->data(), final_message->size()),
           [self = self->shared_from_this(), final_message](auto&&... args) {
             self->on_proxy_data_sent(args...);
           });
-      self->intercepted_sessions_queue.pop();
 
-      if (!self->intercepted_sessions_queue.empty()) {
-        auto next_intercepted_session =
-            self->intercepted_sessions_queue.front();
+      auto it = std::find_if(self->intercepted_sessions.begin(),
+                             self->intercepted_sessions.end(),
+                             [&](auto intercepted_session) {
+                               return intercepted_session.id == interception_id;
+                             });
 
-        self->intercept_cb.value()(
-            next_intercepted_session.http_message, self->remote_host,
-            *next_intercepted_session.intercept_response_cb);
+      if (it != self->intercepted_sessions.end()) {
+        self->intercepted_sessions.erase(it);
       }
     };
 
-    Server::TInterceptResponseCB intercept_response_cb_bind =
-        std::bind(intercept_response_cb, std::ref(to), _1);
+    uuids::uuid id = uuids::random_generator()();
 
+    Server::TInterceptResponseCB intercept_response_cb_bind =
+        std::bind(intercept_response_cb, id, std::ref(to), _1);
+
+    Server::RequestType request_type;
+    if constexpr (std::is_same_v<T_parser, HttpParser::HttpRequestParser>) {
+      request_type = Server::RequestType::HTTP_REQUEST;
+    } else if constexpr (std::is_same_v<T_parser,
+                                        HttpParser::HttpResponseParser>) {
+      request_type = Server::RequestType::HTTP_RESPONSE;
+    }
     Server::InterceptedSession intercepted_session = {
+        .id = id,
         .session = this->shared_from_this(),
+        .remote_host = this->remote_host,
+        .request_type = request_type,
         .http_message = readable_message,
+        .requested_at = std::chrono::system_clock::now(),
         .intercept_response_cb = std::make_shared<Server::TInterceptResponseCB>(
             intercept_response_cb_bind)};
 
-    this->intercepted_sessions_queue.push(intercepted_session);
+    this->intercepted_sessions.push_back(intercepted_session);
 
-    if (this->intercepted_sessions_queue.size() == 1) {
-      this->intercept_cb.value()(readable_message, this->remote_host,
-                                 intercept_response_cb_bind);
-    }
-
+    this->intercept_cb.value()();
   } else {
     auto final_message = std::make_shared<std::vector<char>>();
     *final_message = parser->raw_message;

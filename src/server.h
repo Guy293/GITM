@@ -1,13 +1,16 @@
 #pragma once
 
+#include <chrono>
 #define BUFFER_SIZE 8192
 
 #include <boost/asio.hpp>
 #include <boost/asio/ssl.hpp>
+#include <boost/uuid/uuid.hpp>
 #include <optional>
 #include <queue>
 
 #include "http_request_parser.h"
+#include "http_response_parser.h"
 
 namespace Proxy {
 class Session;
@@ -24,9 +27,7 @@ class Server {
   using TInterceptResponseCB =
       std::function<void(const std::vector<char>& altered_message)>;
 
-  using TInterceptCB = std::function<void(
-      const std::vector<char>& http_message, const std::string& remote_host,
-      const TInterceptResponseCB& intercept_response_cb)>;
+  using TInterceptCB = std::function<void()>;
 
   struct RootCAInfo {
     EVP_PKEY* p_resigned_key;
@@ -35,13 +36,19 @@ class Server {
     EVP_PKEY* p_ca_key_pkey;
   };
 
+  enum RequestType { HTTP_REQUEST, HTTP_RESPONSE };
+
   struct InterceptedSession {
+    boost::uuids::uuid id;  // Used for UI identification
     std::shared_ptr<Session> session;
+    HttpParser::Host remote_host;
+    RequestType request_type;
     std::vector<char> http_message;
+    std::chrono::system_clock::time_point requested_at;
     std::shared_ptr<TInterceptResponseCB> intercept_response_cb;
   };
 
-  using InterceptedSessionsQueue = std::queue<InterceptedSession>;
+  using InterceptedSessions = std::vector<InterceptedSession>;
 
   Server(boost::asio::io_context& io_context,
          boost::asio::ip::tcp::endpoint& endpoint, const char* ca_path,
@@ -53,7 +60,10 @@ class Server {
   void set_intercept_to_client_enabled(bool enabled);
   void set_host_interception_filter(std::string host_filter);
 
-  InterceptedSessionsQueue intercepted_sessions_queue;
+  std::size_t get_intercepted_sessions_list_size() const;
+  const InterceptedSession& get_intercepted_session(std::size_t index) const;
+  const InterceptedSession& get_intercepted_session(
+      const boost::uuids::uuid& id) const;
 
  private:
   void accept();
@@ -64,6 +74,7 @@ class Server {
   std::optional<TInterceptCB> intercept_cb;
   boost::asio::ip::tcp::acceptor acceptor;
   std::optional<boost::asio::ip::tcp::socket> socket;
+  InterceptedSessions intercepted_sessions;
   bool intercept_to_host_enabled;
   bool intercept_to_client_enabled;
   std::string host_interception_filter;
