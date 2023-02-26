@@ -29,6 +29,7 @@ Server::Server(asio::io_context& io_context, tcp::endpoint& endpoint,
       root_ca_info(),
       intercept_cb(),
       intercepted_sessions(),
+      resigned_certificates(),
       intercept_to_host_enabled(false),
       intercept_to_client_enabled(false) {
   FILE* p_ca_file;

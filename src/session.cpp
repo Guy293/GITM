@@ -23,6 +23,7 @@ Session::Session(
     asio::io_context& io_context, tcp::socket&& client_socket,
                  const Server::RootCAInfo& root_ca_info,
     Server::InterceptedSessions& intercepted_sessions_queue,
+    Server::ResignedCertificatesCache& resigned_certificates_cache,
                  const std::optional<Server::TInterceptCB>& intercept_cb,
                  const bool& intercept_to_host_enabled,
                  const bool& intercept_to_client_enabled,
@@ -30,6 +31,7 @@ Session::Session(
     : io_context(io_context),
       root_ca_info(root_ca_info),
       intercepted_sessions(intercepted_sessions_queue),
+      resigned_certificates_cache(resigned_certificates_cache),
       intercept_cb(intercept_cb),
       resolver(io_context),
       client_socket(std::move(client_socket)),
@@ -491,6 +493,12 @@ CLEANUP:
 
 std::tuple<std::string, std::string> Session::resign_certificate(
     X509* p_pub_certificate, std::string hostname) {
+  // Check if the certificate is already in the cache
+  if (this->resigned_certificates_cache.find(hostname) !=
+      this->resigned_certificates_cache.end()) {
+    return this->resigned_certificates_cache[hostname];
+  }
+
   BIO* p_cert_bio;
   BIO* p_key_bio;
   X509* p_resigned_cert_pub =
@@ -517,6 +525,9 @@ std::tuple<std::string, std::string> Session::resign_certificate(
   BIO_free(p_cert_bio);
   BIO_free(p_key_bio);
   X509_free(p_resigned_cert_pub);
+
+  this->resigned_certificates_cache[hostname] = {p_cert_pub_str,
+                                                 p_cert_key_str};
 
   return {p_cert_pub_str, p_cert_key_str};
 }

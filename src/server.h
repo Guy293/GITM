@@ -1,6 +1,7 @@
 #pragma once
 
 #include <chrono>
+#include <unordered_map>
 #define BUFFER_SIZE 8192
 
 #include <boost/asio.hpp>
@@ -28,6 +29,9 @@ class Server {
       std::function<void(const std::vector<char>& altered_message)>;
 
   using TInterceptCB = std::function<void()>;
+
+  using ResignedCertificatesCache =
+      std::unordered_map<std::string, std::tuple<std::string, std::string>>;
 
   struct RootCAInfo {
     EVP_PKEY* p_resigned_key;
@@ -75,6 +79,7 @@ class Server {
   boost::asio::ip::tcp::acceptor acceptor;
   std::optional<boost::asio::ip::tcp::socket> socket;
   InterceptedSessions intercepted_sessions;
+  ResignedCertificatesCache resigned_certificates_cache;
   bool intercept_to_host_enabled;
   bool intercept_to_client_enabled;
   std::string host_interception_filter;
