@@ -384,8 +384,7 @@ void Session::on_proxy_data_sent(const system::error_code& error,
 //  }
 // }
 
-void add_ext(X509* cert, X509* issuer_cert, X509_REQ* req_cert, int nid,
-             const char* value) {
+void add_ext(X509* cert, int nid, const char* value) {
   X509_EXTENSION* ex = NULL;
   X509V3_CTX ctx;
 
@@ -430,11 +429,10 @@ X509* Session::generate_cert(X509* p_server_cert, const char* hostname) {
   // X509_set_serialNumber(p_generated_cert, p_serial_number);
   generate_set_random_serial(p_generated_cert);
 
-  add_ext(p_generated_cert, this->root_ca_info.p_ca_cert, NULL, NID_key_usage,
+  add_ext(p_generated_cert, NID_key_usage,
           "dataEncipherment,keyEncipherment,digitalSignature");
 
-  add_ext(p_generated_cert, this->root_ca_info.p_ca_cert, NULL,
-          NID_ext_key_usage,
+  add_ext(p_generated_cert, NID_ext_key_usage,
           "critical,codeSigning,1.3.6.1.5.5.7.3.1,1.3.6.1.5.5.7.3.2");
 
   //// san_dns = "DNS:" + std::string(hostname);
