@@ -56,8 +56,8 @@ class Session : public std::enable_shared_from_this<Session> {
   void on_proxy_data_sent(const boost::system::error_code& error,
                           std::size_t bytes_transferred);
 
-  X509* generate_cert(X509* p_server_cert, const char* hostname);
-  std::tuple<std::string, std::string> resign_certificate(
+  X509* generate_cert(const char* hostname);
+  std::tuple<std::string, std::string> resign_certificate(std::string hostname);
       X509* p_pub_certificate, std::string hostname);
 
   const Server::RootCAInfo& root_ca_info;

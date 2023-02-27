@@ -1,5 +1,8 @@
 #include "session.h"
 
+#include <openssl/rsa.h>
+#include <openssl/x509.h>
+
 #include <boost/algorithm/string.hpp>
 #include <boost/asio.hpp>
 #include <boost/asio/ssl.hpp>
@@ -176,8 +179,7 @@ void Session::on_remote_handshake(const system::error_code& error) {
       SSL_get_peer_certificate(this->ssl_remote_socket->native_handle());
 
   std::tuple<std::string, std::string> resigned_server_cert =
-      this->resign_certificate(p_server_pub_cert,
-                               this->request_parser.host.name);
+      this->resign_certificate(this->request_parser.host.name);
 
   std::string p_cert_pub_str = std::get<0>(resigned_server_cert);
   std::string p_cert_key_str = std::get<1>(resigned_server_cert);
@@ -414,7 +416,7 @@ int generate_set_random_serial(X509* crt) {
   return 1;
 }
 
-X509* Session::generate_cert(X509* p_server_cert, const char* hostname) {
+X509* Session::generate_cert(const char* hostname) {
   X509* p_generated_cert = nullptr;
   ASN1_INTEGER* p_serial_number = nullptr;
   X509_NAME* p_subject_name = nullptr;
@@ -448,10 +450,14 @@ X509* Session::generate_cert(X509* p_server_cert, const char* hostname) {
                     X509V3_ADD_DEFAULT);
   sk_GENERAL_NAME_pop_free(gens, GENERAL_NAME_free);
 
-  p_subject_name = X509_get_subject_name(p_server_cert);
+  p_subject_name = X509_NAME_new();
+  X509_NAME_add_entry_by_txt(p_subject_name, "CN", MBSTRING_ASC,
+                             (const unsigned char*)hostname, -1, -1, 0);
 
-  X509_set_issuer_name(p_generated_cert, p_subject_name);
   X509_set_subject_name(p_generated_cert, p_subject_name);
+
+  X509_set_issuer_name(p_generated_cert,
+                       X509_get_subject_name(this->root_ca_info.p_ca_cert));
 
   X509_gmtime_adj(X509_get_notBefore(p_generated_cert), 0L);
   X509_gmtime_adj(X509_get_notAfter(p_generated_cert), 31536000L);
@@ -472,9 +478,6 @@ X509* Session::generate_cert(X509* p_server_cert, const char* hostname) {
     goto CLEANUP;
   }
 
-  X509_set_issuer_name(p_generated_cert,
-                       X509_get_subject_name(this->root_ca_info.p_ca_cert));
-
   if (0 > X509_sign(p_generated_cert, this->root_ca_info.p_ca_key_pkey,
                     EVP_sha256())) {
     printf("failed to sign the certificate\n");
@@ -490,7 +493,7 @@ CLEANUP:
 }
 
 std::tuple<std::string, std::string> Session::resign_certificate(
-    X509* p_pub_certificate, std::string hostname) {
+    std::string hostname) {
   // Check if the certificate is already in the cache
   if (this->resigned_certificates_cache.find(hostname) !=
       this->resigned_certificates_cache.end()) {
@@ -499,8 +502,7 @@ std::tuple<std::string, std::string> Session::resign_certificate(
 
   BIO* p_cert_bio;
   BIO* p_key_bio;
-  X509* p_resigned_cert_pub =
-      this->generate_cert(p_pub_certificate, (char*)hostname.c_str());
+  X509* p_resigned_cert_pub = this->generate_cert((char*)hostname.c_str());
 
   // Convert x509 to char*
   char p_cert_pub_str[4096];
