@@ -1,8 +1,5 @@
 #include "session.h"
 
-#include <openssl/rsa.h>
-#include <openssl/x509.h>
-
 #include <boost/algorithm/string.hpp>
 #include <boost/asio.hpp>
 #include <boost/asio/ssl.hpp>
@@ -12,6 +9,7 @@
 #include <utility>
 
 #include "boost/uuid/random_generator.hpp"
+#include "cert.h"
 #include "http_request_parser.h"
 #include "http_response_parser.h"
 #include "logger.h"
@@ -24,7 +22,7 @@ namespace Proxy {
 
 Session::Session(
     asio::io_context& io_context, tcp::socket&& client_socket,
-                 const Server::RootCAInfo& root_ca_info,
+    const Cert::RootCAInfo& root_ca_info,
     Server::InterceptedSessions& intercepted_sessions_queue,
     Server::ResignedCertificatesCache& resigned_certificates_cache,
                  const std::optional<Server::TInterceptCB>& intercept_cb,
@@ -175,14 +173,28 @@ void Session::on_remote_handshake(const system::error_code& error) {
     return;
   }
 
-  X509* p_server_pub_cert =
-      SSL_get_peer_certificate(this->ssl_remote_socket->native_handle());
+  // X509* p_server_pub_cert =
+  //     SSL_get_peer_certificate(this->ssl_remote_socket->native_handle());
 
-  std::tuple<std::string, std::string> resigned_server_cert =
-      this->resign_certificate(this->request_parser.host.name);
+  const std::string& hostname = this->remote_host.name;
 
-  std::string p_cert_pub_str = std::get<0>(resigned_server_cert);
-  std::string p_cert_key_str = std::get<1>(resigned_server_cert);
+  Cert::CertInfo resigned_server_cert;
+
+  // Check if the certificate is already in the cache
+  if (this->resigned_certificates_cache.find(hostname) !=
+      this->resigned_certificates_cache.end()) {
+    // Get the certificate from the cache
+    resigned_server_cert = this->resigned_certificates_cache[hostname];
+  } else {
+    resigned_server_cert =
+        Cert::generate_certificate(this->root_ca_info, hostname);
+
+    // Add the certificate to the cache
+    this->resigned_certificates_cache[hostname] = resigned_server_cert;
+  }
+
+  std::string p_cert_pub_str = resigned_server_cert.cert;
+  std::string p_cert_key_str = resigned_server_cert.key;
 
   this->client_ctx.emplace(asio::ssl::context::sslv23_server);
 
@@ -385,151 +397,5 @@ void Session::on_proxy_data_sent(const system::error_code& error,
 //    SSL_CTX_free(this->client_ctx->native_handle());
 //  }
 // }
-
-void add_ext(X509* cert, int nid, const char* value) {
-  X509_EXTENSION* ex = NULL;
-  X509V3_CTX ctx;
-
-  X509V3_set_ctx_nodb(&ctx);
-  // X509V3_set_ctx(&ctx, cert, issuer_cert, NULL, NULL, 0);
-  // X509V3_set_ctx(&ctx, cert, cert, NULL, NULL, 0);
-  X509V3_set_ctx(&ctx, cert, NULL, NULL, NULL, 0);
-  ex = X509V3_EXT_conf_nid(nullptr, &ctx, nid, value);
-  X509_add_ext(cert, ex, -1);
-  X509_EXTENSION_free(ex);
-}
-
-int generate_set_random_serial(X509* crt) {
-  /* Generates a 10 byte random serial number and sets in certificate. */
-  unsigned char serial_bytes[10];
-  if (RAND_bytes(serial_bytes, sizeof(serial_bytes)) != 1) return 0;
-  serial_bytes[0] &= 0x7f; /* Ensure positive serial! */
-  BIGNUM* bn = BN_new();
-  BN_bin2bn(serial_bytes, sizeof(serial_bytes), bn);
-  ASN1_INTEGER* serial = ASN1_INTEGER_new();
-  BN_to_ASN1_INTEGER(bn, serial);
-
-  X509_set_serialNumber(crt, serial);  // Set serial.
-
-  ASN1_INTEGER_free(serial);
-  BN_free(bn);
-  return 1;
-}
-
-X509* Session::generate_cert(const char* hostname) {
-  X509* p_generated_cert = nullptr;
-  ASN1_INTEGER* p_serial_number = nullptr;
-  X509_NAME* p_subject_name = nullptr;
-  std::string san_dns;
-
-  p_generated_cert = X509_new();
-
-  X509_set_version(p_generated_cert, 2);
-
-  // p_serial_number = X509_get_serialNumber(p_server_cert);
-  // // p_serial_number = X509_get_serialNumber(this->p_ca_cert);
-  // X509_set_serialNumber(p_generated_cert, p_serial_number);
-  generate_set_random_serial(p_generated_cert);
-
-  add_ext(p_generated_cert, NID_key_usage,
-          "dataEncipherment,keyEncipherment,digitalSignature");
-
-  add_ext(p_generated_cert, NID_ext_key_usage,
-          "critical,codeSigning,1.3.6.1.5.5.7.3.1,1.3.6.1.5.5.7.3.2");
-
-  //// san_dns = "DNS:" + std::string(hostname);
-  san_dns = std::string(hostname);
-
-  GENERAL_NAMES* gens = sk_GENERAL_NAME_new_null();
-  GENERAL_NAME* gen_dns = GENERAL_NAME_new();
-  ASN1_IA5STRING* ia5 = ASN1_IA5STRING_new();
-  ASN1_STRING_set(ia5, san_dns.data(), (int)san_dns.length());
-  GENERAL_NAME_set0_value(gen_dns, GEN_DNS, ia5);
-  sk_GENERAL_NAME_push(gens, gen_dns);
-  X509_add1_ext_i2d(p_generated_cert, NID_subject_alt_name, gens, 0,
-                    X509V3_ADD_DEFAULT);
-  sk_GENERAL_NAME_pop_free(gens, GENERAL_NAME_free);
-
-  p_subject_name = X509_NAME_new();
-  X509_NAME_add_entry_by_txt(p_subject_name, "CN", MBSTRING_ASC,
-                             (const unsigned char*)hostname, -1, -1, 0);
-
-  X509_set_subject_name(p_generated_cert, p_subject_name);
-
-  X509_set_issuer_name(p_generated_cert,
-                       X509_get_subject_name(this->root_ca_info.p_ca_cert));
-
-  X509_gmtime_adj(X509_get_notBefore(p_generated_cert), 0L);
-  X509_gmtime_adj(X509_get_notAfter(p_generated_cert), 31536000L);
-
-  if (0 >
-      X509_set_pubkey(p_generated_cert, this->root_ca_info.p_resigned_key)) {
-    printf("failed to set pkey\n");
-    X509_free(p_generated_cert);
-    p_generated_cert = nullptr;
-    goto CLEANUP;
-  }
-
-  if (0 > EVP_PKEY_copy_parameters(this->root_ca_info.p_ca_pkey,
-                                   this->root_ca_info.p_ca_key_pkey)) {
-    printf("failed to copy parameters\n");
-    X509_free(p_generated_cert);
-    p_generated_cert = nullptr;
-    goto CLEANUP;
-  }
-
-  if (0 > X509_sign(p_generated_cert, this->root_ca_info.p_ca_key_pkey,
-                    EVP_sha256())) {
-    printf("failed to sign the certificate\n");
-    X509_free(p_generated_cert);
-    p_generated_cert = nullptr;
-    goto CLEANUP;
-  }
-
-CLEANUP:
-  ASN1_INTEGER_free(p_serial_number);
-  X509_NAME_free(p_subject_name);
-  return p_generated_cert;
-}
-
-std::tuple<std::string, std::string> Session::resign_certificate(
-    std::string hostname) {
-  // Check if the certificate is already in the cache
-  if (this->resigned_certificates_cache.find(hostname) !=
-      this->resigned_certificates_cache.end()) {
-    return this->resigned_certificates_cache[hostname];
-  }
-
-  BIO* p_cert_bio;
-  BIO* p_key_bio;
-  X509* p_resigned_cert_pub = this->generate_cert((char*)hostname.c_str());
-
-  // Convert x509 to char*
-  char p_cert_pub_str[4096];
-  p_cert_bio = BIO_new(BIO_s_mem());
-  PEM_write_bio_X509(p_cert_bio, p_resigned_cert_pub);
-  size_t cert_length = BIO_number_written(p_cert_bio);
-  p_cert_pub_str[cert_length] = 0;
-  BIO_read(p_cert_bio, p_cert_pub_str, cert_length);
-
-  // Convert RSA to char*
-  char p_cert_key_str[4096];
-  p_key_bio = BIO_new(BIO_s_mem());
-  PEM_write_bio_PrivateKey(p_key_bio, this->root_ca_info.p_resigned_key, NULL,
-                           NULL, 0, NULL, NULL);
-
-  size_t key_length = BIO_number_written(p_key_bio);
-  p_cert_key_str[key_length] = 0;
-  BIO_read(p_key_bio, p_cert_key_str, (int)key_length);
-
-  BIO_free(p_cert_bio);
-  BIO_free(p_key_bio);
-  X509_free(p_resigned_cert_pub);
-
-  this->resigned_certificates_cache[hostname] = {p_cert_pub_str,
-                                                 p_cert_key_str};
-
-  return {p_cert_pub_str, p_cert_key_str};
-}
 
 }  // namespace Proxy

@@ -1,3 +1,5 @@
+#include "server.h"
+
 #include <openssl/ssl.h>
 
 #ifdef WIN32
@@ -10,6 +12,7 @@
 #include <iostream>
 #include <utility>
 
+#include "cert.h"
 #include "http_request_parser.h"
 #include "http_response_parser.h"
 #include "logger.h"
@@ -35,23 +38,23 @@ Server::Server(asio::io_context& io_context, tcp::endpoint& endpoint,
   FILE* p_ca_file;
   FILE* p_ca_key_file;
 
-  this->root_ca_info.p_resigned_key = EVP_RSA_gen(2048);
+  this->root_ca_info.p_cert_key = EVP_RSA_gen(2048);
 
   if ((p_ca_file = fopen(ca_path, "r")) == nullptr)
     throw std::runtime_error("Failed to open the ca file");
 
-  if ((this->root_ca_info.p_ca_cert =
+  if ((this->root_ca_info.p_ca_pub_cert =
            PEM_read_X509(p_ca_file, NULL, 0, NULL)) == nullptr)
     throw std::runtime_error("Failed to X509 CA certificate");
 
-  if ((this->root_ca_info.p_ca_pkey =
-           X509_get_pubkey(this->root_ca_info.p_ca_cert)) == nullptr)
+  if ((this->root_ca_info.p_ca_pub_pkey =
+           X509_get_pubkey(this->root_ca_info.p_ca_pub_cert)) == nullptr)
     throw std::runtime_error("Failed to get X509 CA pkey");
 
   if ((p_ca_key_file = fopen(ca_key_path, "r")) == nullptr)
     throw std::runtime_error("Failed to open the ca key file");
 
-  if ((this->root_ca_info.p_ca_key_pkey = PEM_read_PrivateKey(
+  if ((this->root_ca_info.p_ca_priv_pkey = PEM_read_PrivateKey(
            p_ca_key_file, nullptr, nullptr, nullptr)) == nullptr)
     throw std::runtime_error("Failed to read the private key file");
 
@@ -72,7 +75,8 @@ void Server::accept() {
 
     std::shared_ptr<Session> session = std::make_shared<Session>(
         io_context, std::move(*this->socket), root_ca_info,
-        this->intercepted_sessions_queue, this->intercept_cb,
+        this->intercepted_sessions, this->resigned_certificates,
+        this->intercept_cb,
         this->intercept_to_host_enabled, this->intercept_to_client_enabled,
         this->host_interception_filter);
 

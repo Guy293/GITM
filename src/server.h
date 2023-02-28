@@ -10,6 +10,7 @@
 #include <optional>
 #include <queue>
 
+#include "cert.h"
 #include "http_request_parser.h"
 #include "http_response_parser.h"
 
@@ -31,14 +32,7 @@ class Server {
   using TInterceptCB = std::function<void()>;
 
   using ResignedCertificatesCache =
-      std::unordered_map<std::string, std::tuple<std::string, std::string>>;
-
-  struct RootCAInfo {
-    EVP_PKEY* p_resigned_key;
-    X509* p_ca_cert;
-    EVP_PKEY* p_ca_pkey;
-    EVP_PKEY* p_ca_key_pkey;
-  };
+      std::unordered_map<std::string, Cert::CertInfo>;
 
   enum RequestType { HTTP_REQUEST, HTTP_RESPONSE };
 

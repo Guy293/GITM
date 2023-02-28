@@ -5,10 +5,10 @@
 #include <optional>
 #include <queue>
 
+#include "cert.h"
 #include "http_request_parser.h"
 #include "server.h"
 
-// class Server;  // forward declaration
 
 namespace Proxy {
 
@@ -16,7 +16,7 @@ class Session : public std::enable_shared_from_this<Session> {
  public:
   Session(boost::asio::io_context& io_context,
           boost::asio::ip::tcp::socket&& client_socket,
-          const Server::RootCAInfo& root_ca_info,
+          const Cert::RootCAInfo& root_ca_info,
           Server::InterceptedSessions& intercepted_sessions_queue,
           Server::ResignedCertificatesCache& resigned_certificates_cache,
           const std::optional<Server::TInterceptCB>& intercept_cb,
@@ -56,11 +56,7 @@ class Session : public std::enable_shared_from_this<Session> {
   void on_proxy_data_sent(const boost::system::error_code& error,
                           std::size_t bytes_transferred);
 
-  X509* generate_cert(const char* hostname);
-  std::tuple<std::string, std::string> resign_certificate(std::string hostname);
-      X509* p_pub_certificate, std::string hostname);
-
-  const Server::RootCAInfo& root_ca_info;
+  const Cert::RootCAInfo& root_ca_info;
   boost::asio::io_context& io_context;
   Server::InterceptedSessions& intercepted_sessions;
   Server::ResignedCertificatesCache& resigned_certificates_cache;

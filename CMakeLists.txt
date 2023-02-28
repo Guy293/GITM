@@ -1,4 +1,4 @@
-﻿cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.16)
 
 set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
@@ -84,6 +84,7 @@ add_executable(
   "src/logger.cpp"
   "src/main.cpp"
   "src/http_parser.cpp"
+  "src/cert.cpp"
   "src/server.cpp"
   "src/http_request_parser.cpp"
   "src/http_response_parser.cpp"
