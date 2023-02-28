@@ -121,6 +121,45 @@ Cert::CertInfo Cert::X509_to_certinfo(X509* p_pub_cert,
 
   return {p_cert_pub_str, p_cert_key_str};
 }
+
+Cert::CertInfo Cert::generate_root_certificate() {
+  // Generate private key
+  EVP_PKEY* p_key = EVP_RSA_gen(2048);
+
+  X509* p_root_cert = X509_new();
+
+  // Set version
+  X509_set_version(p_root_cert, 2);
+
+  // Set random serial number
+  generate_set_random_serial(p_root_cert);
+
+  // Set expiration date
+  X509_gmtime_adj(X509_get_notBefore(p_root_cert), 0L);
+  X509_gmtime_adj(X509_get_notAfter(p_root_cert), 60 * 60 * 24 * 365 * 10);
+
+  // Set issuer name
+  X509_NAME* p_name = X509_get_subject_name(p_root_cert);
+  X509_NAME_add_entry_by_txt(p_name, "O", MBSTRING_ASC,
+                             (unsigned char*)"GITM Proxy Root Certificate", -1,
+                             -1, 0);
+  X509_set_issuer_name(p_root_cert, p_name);
+
+  // Set CA key usage (https://security.stackexchange.com/questions/49229/)
+  add_ext(p_root_cert, NID_key_usage,
+          "critical,digitalSignature,cRLSign,keyCertSign");
+
+  // Set public key
+  X509_set_pubkey(p_root_cert, p_key);
+
+  // Sign certificate
+  X509_sign(p_root_cert, p_key, EVP_sha256());
+
+  Cert::CertInfo cert_info = X509_to_certinfo(p_root_cert, p_key);
+
+  return cert_info;
+}
+
 void Cert::add_ext(X509* cert, int nid, const char* value) {
   X509_EXTENSION* ex = NULL;
   X509V3_CTX ctx;

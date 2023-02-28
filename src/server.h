@@ -66,7 +66,7 @@ class Server {
  private:
   void accept();
 
-  RootCAInfo root_ca_info;
+  Cert::RootCAInfo root_ca_info;
   boost::asio::io_context& io_context;
   boost::asio::ip::tcp::endpoint endpoint;
   std::optional<TInterceptCB> intercept_cb;

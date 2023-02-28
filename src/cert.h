@@ -24,6 +24,7 @@ class Cert {
 
   static Cert::CertInfo generate_certificate(
       const Cert::RootCAInfo& root_ca_info, const std::string& hostname);
+  static Cert::CertInfo generate_root_certificate();
 
  private:
   static X509* generate_X509_cert(const Cert::RootCAInfo& root_ca_info,
