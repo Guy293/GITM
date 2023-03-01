@@ -150,9 +150,9 @@ void Session::on_ssl_response_sent(const system::error_code& error,
 
   this->remote_ctx.emplace(asio::ssl::context::sslv23_client);
 
-  this->remote_ctx->set_options(asio::ssl::context::no_compression);
-  // ctx.set_options(asio::ssl::context::default_workarounds ||
-  //                 asio::ssl::context::verify_none);
+  SSL_CTX_set_options(this->remote_ctx->native_handle(),
+                      SSL_OP_NO_COMPRESSION | SSL_MODE_RELEASE_BUFFERS |
+                          SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3);
 
   this->remote_ctx->set_default_verify_paths();
 
@@ -198,14 +198,9 @@ void Session::on_remote_handshake(const system::error_code& error) {
 
   this->client_ctx.emplace(asio::ssl::context::sslv23_server);
 
-  /*SSL_CTX_set_options(ssl_context,
-                      SSL_OP_NO_COMPRESSION | SSL_MODE_RELEASE_BUFFERS);*/
-
-  this->client_ctx->set_options(asio::ssl::context::no_compression);
-
-  // ctx.set_options(asio::ssl::context::default_workarounds |
-  //                 asio::ssl::context::verify_none);
-
+  SSL_CTX_set_options(this->remote_ctx->native_handle(),
+                      SSL_OP_NO_COMPRESSION | SSL_MODE_RELEASE_BUFFERS |
+                          SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3);
   this->client_ctx->use_certificate(
       asio::const_buffer(p_cert_pub_str.c_str(), p_cert_pub_str.length()),
       asio::ssl::context::file_format::pem);
