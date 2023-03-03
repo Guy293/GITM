@@ -96,30 +96,23 @@ CLEANUP:
 
 Cert::CertInfo Cert::X509_to_certinfo(X509* p_pub_cert,
                                       EVP_PKEY* p_private_key) {
-  BIO* p_cert_bio;
   BIO* p_key_bio;
 
-  // Convert x509 to char*
-  char p_cert_pub_str[4096];
-  p_cert_bio = BIO_new(BIO_s_mem());
-  PEM_write_bio_X509(p_cert_bio, p_pub_cert);
-  size_t cert_length = BIO_number_written(p_cert_bio);
-  p_cert_pub_str[cert_length] = 0;
-  BIO_read(p_cert_bio, p_cert_pub_str, cert_length);
+  // Convert x509 to std::string
+  std::string cert_pub_str = Cert::X509_to_string(p_pub_cert);
 
   // Convert RSA to char*
-  char p_cert_key_str[4096];
+  char cert_key_str[4096];
   p_key_bio = BIO_new(BIO_s_mem());
   PEM_write_bio_PrivateKey(p_key_bio, p_private_key, NULL, NULL, 0, NULL, NULL);
 
   size_t key_length = BIO_number_written(p_key_bio);
-  p_cert_key_str[key_length] = 0;
-  BIO_read(p_key_bio, p_cert_key_str, (int)key_length);
+  cert_key_str[key_length] = 0;
+  BIO_read(p_key_bio, cert_key_str, (int)key_length);
 
-  BIO_free(p_cert_bio);
   BIO_free(p_key_bio);
 
-  return {p_cert_pub_str, p_cert_key_str};
+  return {cert_pub_str, cert_key_str};
 }
 
 Cert::CertInfo Cert::generate_root_certificate() {
@@ -158,6 +151,22 @@ Cert::CertInfo Cert::generate_root_certificate() {
   Cert::CertInfo cert_info = X509_to_certinfo(p_root_cert, p_key);
 
   return cert_info;
+}
+
+std::string Cert::X509_to_string(X509* p_cert) {
+  BIO* p_cert_bio;
+  BIO* p_key_bio;
+
+  char cert_str[4096];
+  p_cert_bio = BIO_new(BIO_s_mem());
+  PEM_write_bio_X509(p_cert_bio, p_cert);
+  size_t cert_length = BIO_number_written(p_cert_bio);
+  cert_str[cert_length] = 0;
+  BIO_read(p_cert_bio, cert_str, cert_length);
+
+  BIO_free(p_cert_bio);
+
+  return std::string(cert_str);
 }
 
 void Cert::add_ext(X509* cert, int nid, const char* value) {

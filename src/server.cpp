@@ -25,7 +25,7 @@ using asio::ip::tcp;
 namespace Proxy {
 
 Server::Server(asio::io_context& io_context, tcp::endpoint& endpoint,
-               const char* ca_path, const char* ca_key_path)
+               const Cert::CertInfo& root_ca_info)
     : io_context(io_context),
       endpoint(endpoint),
       acceptor(io_context, endpoint),
@@ -35,31 +35,28 @@ Server::Server(asio::io_context& io_context, tcp::endpoint& endpoint,
       resigned_certificates(),
       intercept_to_host_enabled(false),
       intercept_to_client_enabled(false) {
-  FILE* p_ca_file;
-  FILE* p_ca_key_file;
-
+  // cert_key is the private key used to sign all certificates
+  // We use the same one for all certificates for performance reasons
   this->root_ca_info.p_cert_key = EVP_RSA_gen(2048);
 
-  if ((p_ca_file = fopen(ca_path, "r")) == nullptr)
-    throw std::runtime_error("Failed to open the ca file");
+  // Load the root CA certificate and private key from strings
+  BIO* bio;
 
-  if ((this->root_ca_info.p_ca_pub_cert =
-           PEM_read_X509(p_ca_file, NULL, 0, NULL)) == nullptr)
-    throw std::runtime_error("Failed to X509 CA certificate");
+  bio = BIO_new(BIO_s_mem());
+  BIO_puts(bio, root_ca_info.pub.c_str());
+  this->root_ca_info.p_ca_pub_cert =
+      PEM_read_bio_X509(bio, nullptr, nullptr, nullptr);
+  BIO_free(bio);
 
   if ((this->root_ca_info.p_ca_pub_pkey =
            X509_get_pubkey(this->root_ca_info.p_ca_pub_cert)) == nullptr)
     throw std::runtime_error("Failed to get X509 CA pkey");
 
-  if ((p_ca_key_file = fopen(ca_key_path, "r")) == nullptr)
-    throw std::runtime_error("Failed to open the ca key file");
-
-  if ((this->root_ca_info.p_ca_priv_pkey = PEM_read_PrivateKey(
-           p_ca_key_file, nullptr, nullptr, nullptr)) == nullptr)
-    throw std::runtime_error("Failed to read the private key file");
-
-  fclose(p_ca_file);
-  fclose(p_ca_key_file);
+  bio = BIO_new(BIO_s_mem());
+  BIO_puts(bio, root_ca_info.key.c_str());
+  this->root_ca_info.p_ca_priv_pkey =
+      PEM_read_bio_PrivateKey(bio, nullptr, nullptr, nullptr);
+  BIO_free(bio);
 
   this->accept();
 }
@@ -74,7 +71,7 @@ void Server::accept() {
     }
 
     std::shared_ptr<Session> session = std::make_shared<Session>(
-        io_context, std::move(*this->socket), root_ca_info,
+        this->io_context, std::move(*this->socket), this->root_ca_info,
         this->intercepted_sessions, this->resigned_certificates,
         this->intercept_cb,
         this->intercept_to_host_enabled, this->intercept_to_client_enabled,

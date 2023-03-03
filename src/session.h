@@ -9,7 +9,6 @@
 #include "http_request_parser.h"
 #include "server.h"
 
-
 namespace Proxy {
 
 class Session : public std::enable_shared_from_this<Session> {
@@ -32,6 +31,7 @@ class Session : public std::enable_shared_from_this<Session> {
   void on_request_read(const boost::system::error_code& error,
                        std::size_t bytes_transferred,
                        std::shared_ptr<std::vector<char>> buffer);
+  void cert_response();
   void on_remote_resolve(
       const boost::system::error_code& error,
       boost::asio::ip::tcp::resolver::iterator endpoint_iterator);

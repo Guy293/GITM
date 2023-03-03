@@ -18,13 +18,14 @@ class Cert {
   };
 
   struct CertInfo {
-    std::string cert;
+    std::string pub;
     std::string key;
   };
 
   static Cert::CertInfo generate_certificate(
       const Cert::RootCAInfo& root_ca_info, const std::string& hostname);
   static Cert::CertInfo generate_root_certificate();
+  static std::string X509_to_string(X509* p_cert);
 
  private:
   static X509* generate_X509_cert(const Cert::RootCAInfo& root_ca_info,

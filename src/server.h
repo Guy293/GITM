@@ -49,8 +49,8 @@ class Server {
   using InterceptedSessions = std::vector<InterceptedSession>;
 
   Server(boost::asio::io_context& io_context,
-         boost::asio::ip::tcp::endpoint& endpoint, const char* ca_path,
-         const char* ca_key_path);
+         boost::asio::ip::tcp::endpoint& endpoint,
+         const Cert::CertInfo& root_ca_info);
 
   void set_intercept_cb(const TInterceptCB& intercept_cb);
 

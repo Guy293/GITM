@@ -11,7 +11,7 @@ GITM is currently in development but is already capable of basic interception an
 - CMake 3.6+
 - Qt 6.0+ (Core, GUI, Widgets)
 - OpenSSL
-- Boost 1.71 (zlib, iostreams, log)
+- Boost 1.71+ (zlib, iostreams, log)
 - [Brotli](https://github.com/google/brotli)
 
 **Make sure you set all the environment variables for the dependencies so CMake can find them.**
@@ -27,9 +27,10 @@ make
 
 ## Certificate
 
-Currently GITM can't generate a certificate for HTTPS interception. You can either use the one provided in the
-repository or generate your own.
-
-Install the certificate either in your system or directly in your browser.
-
-Note: The cert.crt and cert.key needs to be in the same directory as the executable.
+GITM will generate a certificate for HTTPS interception on first run and store it in the `settings.ini` file.  
+Download the certificate by connecting to the proxy and visit either <http://GITM/>, <http://certificate/> or <http://cert/>.  
+Install the certificate either in your system (Trusted Root Certification Authorities on Windows) or directly in your browser.
+### Tutorials:  
+- [Windows](https://learn.microsoft.com/en-us/skype-sdk/sdn/articles/installing-the-trusted-root-certificate)
+- [Android](https://stackoverflow.com/a/65319223/9039217) (You might need to bypass some apps ssl pinning)
+- [Firefox](https://www.wikihow.com/Install-a-Certificate-on-Android)

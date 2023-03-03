@@ -91,6 +91,12 @@ void Session::on_request_read(const system::error_code& error,
   LOG_DEBUG << "Target: " << this->remote_host.name << ":"
             << this->remote_host.port;
 
+  if (this->remote_host.name == "gitm" || this->remote_host.name == "cert" ||
+      this->remote_host.name == "certificate") {
+    this->cert_response();
+    return;
+  }
+
   // tcp::resolver::query query(this->request_parser.host.name,
   //     std::to_string(this->request_parser.host.port),
   //     asio::ip::resolver_query_base::numeric_service);
@@ -98,6 +104,26 @@ void Session::on_request_read(const system::error_code& error,
   this->resolver.async_resolve(
       this->remote_host.name, std::to_string(this->remote_host.port),
       std::bind(&Session::on_remote_resolve, this->shared_from_this(), _1, _2));
+}
+
+void Session::cert_response() {
+  std::string response =
+      "HTTP/1.0 200 Connection established\r\n"
+      "Content-Type: application/x-x509-ca-cert\r\n"
+      "Content-Disposition: attachment; filename=GITM.crt\r\n"
+      "Connection: close\r\n\r\n";
+
+  response += Cert::X509_to_string(this->root_ca_info.p_ca_pub_cert);
+
+  this->client_socket.async_send(
+      asio::buffer(response.data(), response.size()),
+      [self = this->shared_from_this()](const system::error_code& error,
+                                        std::size_t bytes_transferred) {
+        if (error) {
+          LOG_ERROR << error.message();
+          return;
+        }
+      });
 }
 
 void Session::on_remote_resolve(const system::error_code& error,
@@ -193,7 +219,7 @@ void Session::on_remote_handshake(const system::error_code& error) {
     this->resigned_certificates_cache[hostname] = resigned_server_cert;
   }
 
-  std::string p_cert_pub_str = resigned_server_cert.cert;
+  std::string p_cert_pub_str = resigned_server_cert.pub;
   std::string p_cert_key_str = resigned_server_cert.key;
 
   this->client_ctx.emplace(asio::ssl::context::sslv23_server);
@@ -201,6 +227,7 @@ void Session::on_remote_handshake(const system::error_code& error) {
   SSL_CTX_set_options(this->remote_ctx->native_handle(),
                       SSL_OP_NO_COMPRESSION | SSL_MODE_RELEASE_BUFFERS |
                           SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3);
+  try {
   this->client_ctx->use_certificate(
       asio::const_buffer(p_cert_pub_str.c_str(), p_cert_pub_str.length()),
       asio::ssl::context::file_format::pem);
@@ -208,6 +235,11 @@ void Session::on_remote_handshake(const system::error_code& error) {
   this->client_ctx->use_private_key(
       asio::const_buffer(p_cert_key_str.c_str(), p_cert_key_str.length()),
       asio::ssl::context::file_format::pem);
+
+  } catch (const std::exception& e) {
+    LOG_ERROR << e.what();
+    return;
+  }
 
   this->ssl_client_socket.emplace(this->client_socket, *this->client_ctx);
 

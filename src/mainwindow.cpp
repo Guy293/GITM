@@ -29,10 +29,10 @@ MainWindow::MainWindow(QWidget* parent, Proxy::Server& server)
   QObject::connect(this, &MainWindow::session_intercepted_signal, this,
                    &MainWindow::on_new_intercpeted_session);
   HttpHighlighter* highlighter =
-      new HttpHighlighter(ui->plainTextEdit->document());
+      new HttpHighlighter(ui->messageEditorPlainTextEdit->document());
 
   this->ui->interceptingRemote->setText("Remote: ");
-  this->ui->plainTextEdit->setEnabled(false);
+  this->ui->messageEditorPlainTextEdit->setEnabled(false);
   this->ui->sendButton->setEnabled(false);
 
   QAbstractItemModel* model = new GUI::PendingRequestsListModel(this->server);
@@ -48,7 +48,7 @@ void MainWindow::intercept_cb() { emit this->session_intercepted_signal(); }
 
 void MainWindow::set_editor_session(
     const Proxy::Server::InterceptedSession& intercepted_session) {
-  this->ui->plainTextEdit->setPlainText(
+  this->ui->messageEditorPlainTextEdit->setPlainText(
       QString::fromUtf8(intercepted_session.http_message.data(),
                         intercepted_session.http_message.size()));
 
@@ -58,7 +58,7 @@ void MainWindow::set_editor_session(
           intercepted_session.remote_host.name + ":" +
           std::to_string(intercepted_session.remote_host.port)));
 
-  this->ui->plainTextEdit->setEnabled(true);
+  this->ui->messageEditorPlainTextEdit->setEnabled(true);
   this->ui->sendButton->setEnabled(true);
 }
 
@@ -71,7 +71,7 @@ void MainWindow::on_new_intercpeted_session() {
           this->ui->interceptionQueueListView->model()->rowCount(), 0));
 
   // Select the first session if there is no current session selected
-  if (this->ui->plainTextEdit->toPlainText().isEmpty()) {
+  if (this->ui->messageEditorPlainTextEdit->toPlainText().isEmpty()) {
     QModelIndex first_index =
         this->ui->interceptionQueueListView->model()->index(0, 0);
     this->ui->interceptionQueueListView->setCurrentIndex(first_index);
@@ -86,15 +86,14 @@ void MainWindow::on_session_queue_clicked(const QModelIndex& index) {
 }
 
 void MainWindow::on_sendButton_clicked() {
-  if (this->intercept_response_cb.has_value()) {
     QByteArray intercepted_message =
-        this->ui->plainTextEdit->toPlainText().toUtf8();
+      this->ui->messageEditorPlainTextEdit->toPlainText().toUtf8();
 
     // Add carriage return (\r) to every line feed (\n) to make it a valid HTTP
     intercepted_message.replace("\n", "\r\n");
 
-    this->ui->plainTextEdit->clear();
-    this->ui->plainTextEdit->setEnabled(false);
+  this->ui->messageEditorPlainTextEdit->clear();
+  this->ui->messageEditorPlainTextEdit->setEnabled(false);
     this->ui->sendButton->setEnabled(false);
     this->ui->interceptingRemote->setText("Remote: ");
 
