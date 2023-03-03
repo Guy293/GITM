@@ -30,7 +30,7 @@ make
 GITM will generate a certificate for HTTPS interception on first run and store it in the `settings.ini` file.  
 Download the certificate by connecting to the proxy and visit either <http://GITM/>, <http://certificate/> or <http://cert/>.  
 Install the certificate either in your system (Trusted Root Certification Authorities on Windows) or directly in your browser.
-### Tutorials:  
+#### Tutorials:  
 - [Windows](https://learn.microsoft.com/en-us/skype-sdk/sdn/articles/installing-the-trusted-root-certificate)
 - [Android](https://stackoverflow.com/a/65319223/9039217) (You might need to bypass some apps ssl pinning)
-- [Firefox](https://www.wikihow.com/Install-a-Certificate-on-Android)
+- [Firefox](https://docs.vmware.com/en/VMware-Adapter-for-SAP-Landscape-Management/2.1.0/Installation-and-Administration-Guide-for-VLA-Administrators/GUID-0CED691F-79D3-43A4-B90D-CD97650C13A0.html)

@@ -25,7 +25,7 @@ int main(int argc, char** argv) {
 
   Proxy::Cert::CertInfo ca_cert_info;
 
-  // Generate root certificate if they don't exist
+  // Generate root certificate if it doesn't exist
   if (settings.value("cert_pub").isNull() ||
       settings.value("cert_priv").isNull()) {
     ca_cert_info = Proxy::Cert::generate_root_certificate();
