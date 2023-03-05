@@ -1,7 +1,5 @@
 #pragma once
 
-#define BOOST_USE_WINAPI_VERSION BOOST_WINAPI_VERSION_WIN7
-
 #include <string.h>
 
 #include <boost/log/attributes.hpp>
