@@ -142,6 +142,8 @@ Cert::CertInfo Cert::generate_root_certificate() {
   add_ext(p_root_cert, NID_key_usage,
           "critical,digitalSignature,cRLSign,keyCertSign");
 
+  add_ext(p_root_cert, NID_basic_constraints, "critical,CA:TRUE");
+
   // Set public key
   X509_set_pubkey(p_root_cert, p_key);
 
