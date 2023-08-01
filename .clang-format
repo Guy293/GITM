@@ -2,7 +2,7 @@
 BasedOnStyle: GOOGLE
 Language: Cpp
 # SeparateDefinitionBlocks: Always
-# IndentWidth: 4
+IndentWidth: 4
 # ColumnLimit: 80
 # SpaceAfterCStyleCast: true
 # UseTab: Never
