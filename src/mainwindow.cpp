@@ -11,7 +11,6 @@
 #include <boost/uuid/nil_generator.hpp>
 
 #include "http_highlighter.h"
-#include "logger.h"
 #include "mainwindow.h"
 #include "pending_sessions_list_model.h"
 #include "server.h"
@@ -38,6 +37,7 @@ MainWindow::MainWindow(QWidget* parent, Proxy::Server& server)
     this->ui->interceptingRemote->setText("Remote: ");
     this->ui->messageEditorPlainTextEdit->setEnabled(false);
     this->ui->sendButton->setEnabled(false);
+    this->ui->dropButton->setEnabled(false);
 
     QAbstractItemModel* model = new GUI::PendingRequestsListModel(this->server);
     this->ui->interceptionQueueListView->setModel(model);
@@ -64,6 +64,7 @@ void MainWindow::set_editor_session(
 
     this->ui->messageEditorPlainTextEdit->setEnabled(true);
     this->ui->sendButton->setEnabled(true);
+    this->ui->dropButton->setEnabled(true);
 }
 
 void MainWindow::on_new_intercpeted_session() {
@@ -88,9 +89,16 @@ void MainWindow::on_session_queue_clicked(const QModelIndex& index) {
     this->set_editor_session(intercepted_session);
 }
 
-void MainWindow::on_sendButton_clicked() {
-    QByteArray intercepted_message =
+void MainWindow::handleSend(bool drop_session) {
+    QByteArray intercepted_message;
+
+    if (drop_session) {
+        // When the message is empty the session is dropped
+        intercepted_message = "";
+    } else {
+        intercepted_message =
         this->ui->messageEditorPlainTextEdit->toPlainText().toUtf8();
+    }
 
     // Add carriage return (\r) to every line feed (\n) to make it a valid HTTP
     intercepted_message.replace("\n", "\r\n");
@@ -98,6 +106,7 @@ void MainWindow::on_sendButton_clicked() {
     this->ui->messageEditorPlainTextEdit->clear();
     this->ui->messageEditorPlainTextEdit->setEnabled(false);
     this->ui->sendButton->setEnabled(false);
+    this->ui->dropButton->setEnabled(false);
     this->ui->interceptingRemote->setText("Remote: ");
 
     auto current_intercepting_session = this->server.get_intercepted_session(
@@ -128,6 +137,10 @@ void MainWindow::on_sendButton_clicked() {
         this->on_session_queue_clicked(next_index);
     }
 }
+
+void MainWindow::on_sendButton_clicked() { handleSend(); }
+
+void MainWindow::on_dropButton_clicked() { handleSend(true); }
 
 void MainWindow::on_interceptToClientCheckBox_toggled(bool checked) {
     this->server.set_intercept_to_client_enabled(checked);

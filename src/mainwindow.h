@@ -3,7 +3,6 @@
 #include <boost/uuid/uuid.hpp>
 
 #include "server.h"
-#include "session.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -23,6 +22,7 @@ class MainWindow : public QMainWindow {
     void on_new_intercpeted_session();
     void on_session_queue_clicked(const QModelIndex& index);
     void on_sendButton_clicked();
+    void on_dropButton_clicked();
     void on_interceptToClientCheckBox_toggled(bool checked);
     void on_interceptToHostCheckBox_toggled(bool checked);
     void on_hostFilterLineEdit_textEdited(const QString& arg1);
@@ -31,6 +31,7 @@ class MainWindow : public QMainWindow {
     void session_intercepted_signal();
 
    private:
+    void handleSend(bool drop_session = false);
     void set_editor_session(
         const Proxy::Server::InterceptedSession& intercepted_session);
 

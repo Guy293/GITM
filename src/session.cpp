@@ -360,6 +360,8 @@ void Session::on_proxy_data_read(const system::error_code& error,
 
             // Drop if empty (dropped by the intercept callback)
             if (altered_message.empty()) {
+                self->client_socket.close();
+                self->remote_socket.close();
                 return;
             }
 
