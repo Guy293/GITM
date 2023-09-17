@@ -29,7 +29,7 @@ MainWindow::MainWindow(QWidget* parent, Proxy::Server& server)
     ui->setupUi(this);
 
     QObject::connect(this, &MainWindow::session_intercepted_signal, this,
-                     &MainWindow::on_new_intercpeted_session);
+                     &MainWindow::on_new_intercepted_session);
 
     HttpHighlighter* highlighter =
         new HttpHighlighter(this->ui->messageEditorPlainTextEdit->document());
@@ -75,7 +75,7 @@ void MainWindow::update_interception_queue_list_view() {
             this->ui->interceptionQueueListView->model()->rowCount(), 0));
 }
 
-void MainWindow::on_new_intercpeted_session() {
+void MainWindow::on_new_intercepted_session() {
     this->update_interception_queue_list_view();
 
     // Select the first session if there is no current session selected

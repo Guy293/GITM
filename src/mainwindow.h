@@ -19,7 +19,7 @@ class MainWindow : public QMainWindow {
     ~MainWindow() override;
 
    public slots:
-    void on_new_intercpeted_session();
+    void on_new_intercepted_session();
     void on_session_queue_clicked(const QModelIndex& index);
     void on_sendButton_clicked();
     void on_dropButton_clicked();
