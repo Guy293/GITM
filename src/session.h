@@ -1,4 +1,3 @@
-// #include <vld.h>
 #pragma once
 
 #include <boost/asio.hpp>
@@ -27,8 +26,6 @@ class Session : public std::enable_shared_from_this<Session> {
     //   ~Session();
 
    private:
-    // static const int BUFFER_SIZE = 8192;
-
     void on_request_read(const boost::system::error_code& error,
                          std::size_t bytes_transferred,
                          std::shared_ptr<std::vector<char>> buffer);

@@ -38,6 +38,7 @@ MainWindow::MainWindow(QWidget* parent, Proxy::Server& server)
     this->ui->messageEditorPlainTextEdit->setEnabled(false);
     this->ui->sendButton->setEnabled(false);
     this->ui->dropButton->setEnabled(false);
+    this->ui->sendAllButton->setEnabled(false);
 
     QAbstractItemModel* model = new GUI::PendingRequestsListModel(this->server);
     this->ui->interceptionQueueListView->setModel(model);
@@ -67,19 +68,22 @@ void MainWindow::set_editor_session(
     this->ui->dropButton->setEnabled(true);
 }
 
-void MainWindow::on_new_intercpeted_session() {
+void MainWindow::update_interception_queue_list_view() {
     this->ui->interceptionQueueListView->model()->dataChanged(
         this->ui->interceptionQueueListView->model()->index(0, 0),
         this->ui->interceptionQueueListView->model()->index(
             this->ui->interceptionQueueListView->model()->rowCount(), 0));
+}
+
+void MainWindow::on_new_intercpeted_session() {
+    this->update_interception_queue_list_view();
 
     // Select the first session if there is no current session selected
     if (this->ui->messageEditorPlainTextEdit->toPlainText().isEmpty()) {
-        QModelIndex first_index =
-            this->ui->interceptionQueueListView->model()->index(0, 0);
-        this->ui->interceptionQueueListView->setCurrentIndex(first_index);
-        this->on_session_queue_clicked(first_index);
+        this->select_session_index_from_queue(0);
     }
+
+    this->ui->sendAllButton->setEnabled(true);
 }
 
 void MainWindow::on_session_queue_clicked(const QModelIndex& index) {
@@ -89,7 +93,16 @@ void MainWindow::on_session_queue_clicked(const QModelIndex& index) {
     this->set_editor_session(intercepted_session);
 }
 
-void MainWindow::handleSend(bool drop_session) {
+void MainWindow::select_session_index_from_queue(int next_index_int) {
+    QModelIndex next_index =
+        this->ui->interceptionQueueListView->model()->index(next_index_int, 0);
+    if (next_index.isValid()) {
+        this->ui->interceptionQueueListView->setCurrentIndex(next_index);
+        this->on_session_queue_clicked(next_index);
+    }
+}
+
+void MainWindow::handle_send(bool drop_session) {
     QByteArray intercepted_message;
 
     if (drop_session) {
@@ -118,29 +131,37 @@ void MainWindow::handleSend(bool drop_session) {
     intercept_response_cb(std::vector<char>(intercepted_message.begin(),
                                             intercepted_message.end()));
 
-    this->ui->interceptionQueueListView->model()->dataChanged(
-        this->ui->interceptionQueueListView->model()->index(0, 0),
-        this->ui->interceptionQueueListView->model()->index(
-            this->ui->interceptionQueueListView->model()->rowCount(), 0));
+    this->update_interception_queue_list_view();
+
+    // The session gets removed from the queue only after the callback is called
+    // So this check is being run after the callback
+        if (this->ui->interceptionQueueListView->model()->rowCount() == 0) {
+        this->ui->sendAllButton->setEnabled(false);
+    }
 
     // Select the next session in the queue
     int current_index =
         this->ui->interceptionQueueListView->currentIndex().row();
-    int next_index_int = current_index - 1;
-    if (next_index_int < 0) {
-        next_index_int = 0;
-    }
-    QModelIndex next_index =
-        this->ui->interceptionQueueListView->model()->index(next_index_int, 0);
-    if (next_index.isValid()) {
-        this->ui->interceptionQueueListView->setCurrentIndex(next_index);
-        this->on_session_queue_clicked(next_index);
-    }
+    int next_index = std::max(0, current_index - 1);
+    this->select_session_index_from_queue(next_index);
 }
 
-void MainWindow::on_sendButton_clicked() { handleSend(); }
+void MainWindow::on_sendButton_clicked() { handle_send(); }
 
-void MainWindow::on_dropButton_clicked() { handleSend(true); }
+void MainWindow::on_dropButton_clicked() { handle_send(true); }
+
+void MainWindow::on_sendAllButton_clicked() {
+    this->server.forward_all_intercepted_sessions();
+
+    this->update_interception_queue_list_view();
+
+    this->ui->messageEditorPlainTextEdit->clear();
+    this->ui->messageEditorPlainTextEdit->setEnabled(false);
+    this->ui->sendButton->setEnabled(false);
+    this->ui->dropButton->setEnabled(false);
+    this->ui->sendAllButton->setEnabled(false);
+    this->ui->interceptingRemote->setText("Remote: ");
+}
 
 void MainWindow::on_interceptToClientCheckBox_toggled(bool checked) {
     this->server.set_intercept_to_client_enabled(checked);

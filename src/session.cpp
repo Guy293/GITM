@@ -18,6 +18,8 @@ using namespace boost;
 using namespace std::placeholders;
 using asio::ip::tcp;
 
+constexpr int BUFFER_SIZE = 8192;
+
 namespace Proxy {
 
 Session::Session(asio::io_context& io_context, tcp::socket&& client_socket,

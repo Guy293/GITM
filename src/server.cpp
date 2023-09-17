@@ -125,4 +125,11 @@ const Server::InterceptedSession& Server::get_intercepted_session(
     return *it;
 }
 
+void Server::forward_all_intercepted_sessions() {
+    while (!this->intercepted_sessions.empty()) {
+        auto session = this->get_intercepted_session(0);
+        (*session.intercept_response_cb)(session.http_message);
+    }
+}
+
 }  // namespace Proxy

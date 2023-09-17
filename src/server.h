@@ -1,9 +1,7 @@
-// #include <vld.h>
 #pragma once
 
 #include <chrono>
 #include <unordered_map>
-#define BUFFER_SIZE 8192
 
 #include <boost/asio.hpp>
 #include <boost/asio/ssl.hpp>
@@ -13,7 +11,6 @@
 
 #include "cert.h"
 #include "http_parser/http_request_parser.h"
-#include "http_parser/http_response_parser.h"
 
 namespace Proxy {
 class Session;
@@ -63,6 +60,8 @@ class Server {
     const InterceptedSession& get_intercepted_session(std::size_t index) const;
     const InterceptedSession& get_intercepted_session(
         const boost::uuids::uuid& id) const;
+
+    void forward_all_intercepted_sessions();
 
    private:
     void accept();
