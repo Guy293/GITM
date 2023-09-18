@@ -36,9 +36,9 @@ MainWindow::MainWindow(QWidget* parent, Proxy::Server& server)
 
     this->ui->interceptingRemote->setText("Remote: ");
     this->ui->messageEditorPlainTextEdit->setEnabled(false);
-    this->ui->sendButton->setEnabled(false);
-    this->ui->dropButton->setEnabled(false);
-    this->ui->sendAllButton->setEnabled(false);
+    this->ui->forwardInterceptedSessionButton->setEnabled(false);
+    this->ui->dropInterceptedSessionButton->setEnabled(false);
+    this->ui->forwardAllButton->setEnabled(false);
 
     QAbstractItemModel* model = new GUI::PendingRequestsListModel(this->server);
     this->ui->interceptionQueueListView->setModel(model);
@@ -64,8 +64,8 @@ void MainWindow::set_editor_session(
             std::to_string(intercepted_session.remote_host.port)));
 
     this->ui->messageEditorPlainTextEdit->setEnabled(true);
-    this->ui->sendButton->setEnabled(true);
-    this->ui->dropButton->setEnabled(true);
+    this->ui->forwardInterceptedSessionButton->setEnabled(true);
+    this->ui->dropInterceptedSessionButton->setEnabled(true);
 }
 
 void MainWindow::update_interception_queue_list_view() {
@@ -83,7 +83,7 @@ void MainWindow::on_new_intercepted_session() {
         this->select_session_index_from_queue(0);
     }
 
-    this->ui->sendAllButton->setEnabled(true);
+    this->ui->forwardAllButton->setEnabled(true);
 }
 
 void MainWindow::on_session_queue_clicked(const QModelIndex& index) {
@@ -118,8 +118,8 @@ void MainWindow::handle_send(bool drop_session) {
 
     this->ui->messageEditorPlainTextEdit->clear();
     this->ui->messageEditorPlainTextEdit->setEnabled(false);
-    this->ui->sendButton->setEnabled(false);
-    this->ui->dropButton->setEnabled(false);
+    this->ui->forwardInterceptedSessionButton->setEnabled(false);
+    this->ui->dropInterceptedSessionButton->setEnabled(false);
     this->ui->interceptingRemote->setText("Remote: ");
 
     auto current_intercepting_session = this->server.get_intercepted_session(
@@ -136,7 +136,7 @@ void MainWindow::handle_send(bool drop_session) {
     // The session gets removed from the queue only after the callback is called
     // So this check is being run after the callback
         if (this->ui->interceptionQueueListView->model()->rowCount() == 0) {
-        this->ui->sendAllButton->setEnabled(false);
+        this->ui->forwardAllButton->setEnabled(false);
     }
 
     // Select the next session in the queue
@@ -146,20 +146,22 @@ void MainWindow::handle_send(bool drop_session) {
     this->select_session_index_from_queue(next_index);
 }
 
-void MainWindow::on_sendButton_clicked() { handle_send(); }
+void MainWindow::on_forwardInterceptedSessionButton_clicked() { handle_send(); }
 
-void MainWindow::on_dropButton_clicked() { handle_send(true); }
+void MainWindow::on_dropInterceptedSessionButton_clicked() {
+    handle_send(true);
+}
 
-void MainWindow::on_sendAllButton_clicked() {
+void MainWindow::on_forwardAllButton_clicked() {
     this->server.forward_all_intercepted_sessions();
 
     this->update_interception_queue_list_view();
 
     this->ui->messageEditorPlainTextEdit->clear();
     this->ui->messageEditorPlainTextEdit->setEnabled(false);
-    this->ui->sendButton->setEnabled(false);
-    this->ui->dropButton->setEnabled(false);
-    this->ui->sendAllButton->setEnabled(false);
+    this->ui->forwardInterceptedSessionButton->setEnabled(false);
+    this->ui->dropInterceptedSessionButton->setEnabled(false);
+    this->ui->forwardAllButton->setEnabled(false);
     this->ui->interceptingRemote->setText("Remote: ");
 }
 

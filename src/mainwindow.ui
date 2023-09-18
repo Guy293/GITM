@@ -105,14 +105,14 @@
         <item>
          <layout class="QHBoxLayout" name="horizontalLayout_5">
           <item>
-           <widget class="QPushButton" name="sendButton">
+           <widget class="QPushButton" name="forwardInterceptedSessionButton">
             <property name="text">
-             <string>Send</string>
+             <string>Forward</string>
             </property>
            </widget>
           </item>
           <item>
-           <widget class="QPushButton" name="dropButton">
+           <widget class="QPushButton" name="dropInterceptedSessionButton">
             <property name="text">
              <string>Drop</string>
             </property>
@@ -136,9 +136,9 @@
       <item>
        <layout class="QVBoxLayout" name="verticalLayout_4">
         <item>
-         <widget class="QPushButton" name="sendAllButton">
+         <widget class="QPushButton" name="forwardAllButton">
           <property name="text">
-           <string>Send All</string>
+           <string>Forward All</string>
           </property>
          </widget>
         </item>
@@ -172,8 +172,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>642</width>
-     <height>21</height>
+     <width>891</width>
+     <height>27</height>
     </rect>
    </property>
   </widget>

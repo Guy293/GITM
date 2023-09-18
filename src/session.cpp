@@ -367,6 +367,8 @@ void Session::on_proxy_data_read(const system::error_code& error,
                 return;
             }
 
+            // Rebuild message to convert from readable http to actual http message
+            // (re-encode and re-compress)
             std::shared_ptr<std::vector<char>> final_message;
             // If the message was not altered,
             // send the original message instead of building it again
